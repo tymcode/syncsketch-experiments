@@ -1,0 +1,4 @@
+base_url: https://syncsketch.com/api/
+ProjectUnderTest: Creation
+ReviewUnderTest: Final
+ItemUnderTest: Screener
