@@ -135,7 +135,7 @@ For Discord, this bit here is the magic:
 Discord wants a JSON object in the body containing  `username` and `content` text strings and that's it.  Everything else you see here is about building a webhook message of our own and doing some error-checking, then sending it and relaying Discord's response back to `index.js`.
 
 ###Deploying the Function
-Every time you change the code in here, you need to "deploy" it, so let's do that.
+Every time you change the code in here, you need to *deploy* it, so let's do that.
 
 > DOCUMENT THE DEPLOY UX
 
@@ -156,7 +156,7 @@ If so, so far so good!  If not, check the following:
 ##Writing your Webhook Listener
 Now we'll get the Lambda function to handle real input.
 
-As input, the SyncSketch webhook will send JSON in the body of the message that looks something like this:
+As input, the SyncSketch webhook will send JSON in the body of the message that looks something like this, which is what is sent with the `item_approval_status_changed` event:
 
 ```
 {
@@ -171,22 +171,87 @@ As input, the SyncSketch webhook will send JSON in the body of the message that 
   },
   "item_creator": {
     "id": 1,
-    "name": "Brady",
+    "name": "Mike Jennings",
     "email": "tymcode@gmail.com"
   },
   "new_status": "approved",
   "project": {
-    "name": "Mike project",
+    "name": "The Bridegoon Project",
     "id": 101
   },
-  "item_id": 1234,
+  "item_id": 4056789,
   "old_status": "wip"
 }
 ```
 
-###Sending Custom Request Headers
+We will pull the values from this data structure to build the message that gets posted to the chat.
+
+> DOCUMENT REPLACING THE DUMMY MESSAGE WITH A TEMPLATE STRING
+
+To test this, we will need to send a message that has a body. Copy the example body above and replace the body data in the WebHookTrigger test event.
+
+> DOCUMENT UPDATING THE TEST EVENT
+
+Now test it again, and verify that the body data is being formatted correctly in the Discord chat.
+
+> SPEND SOME TIME WITH TROUBLESHOOTING TIPS HERE
+
+##Adding the API Gateway
+For messages from SyncSketch to get routed to your Lambda, they must go through a gateway.  So now it's time to add an API Gateway to your Lambda.
+
+> DOCUMENT CONFIGURING THE API GATEWAY
+
+We can test it within the API Gateway console.
+
+> DOCUMENT THE BUILT IN TEST
+
+If this succeeds then it should be accessible from the outside world.  Let's have a look.
+
+> CURL STATEMENT
+
+You should have a new message in the chat, which means your function is complete and working! Now all we have to do is set up the SyncSketch webhook to send messages to it.
+
+## Creating a SyncSketch Webhook
+
+Before we start setting up the webhook in your SyncSketch account, you need the following bits of information:
+
+* The http address of your API Gateway's POST method
+* Which events you want to be notified about from the available list
+
+Currently there's no way to set up the webhooks in the SyncSketch web site.  But we can still do it with cURL or Postman.  In fact, the SyncSketch API page will provide the cURL command to set up the webhook, and we will use that as a template to make ours.
+
+> DOCUMENT DOING IT WITH CURL
+
+If you don't care to use a command-line tool like cURL, there are many application programs like Postman and Insomnia that will help you build your API request graphically.
+
+To use Postman:
+1. Copy the cURL command from the Create a Webhook API documentation
+2. Select File > Import
+3. In the import dialog, select the "Raw text" tab.
+4. Paste in the cURL command into the dialog and hit OK
+
+Nw you can replace the default text with your sspecific details, like the URL for the API Gateway
+
+If you Send your request and receive a response code of 200, you should be ready to go.  In your SyncSketch account, trigger the event that you want notifications about, and give it a try!
+
+> TROUBLESHOOTING
+
+## Other Events
+Each event notification will have a different JSON data structure in its body.  If you require more than one notification type, you will need to determine the event type before you build the Discord message.  For this reason, we will add a little more complexity to `index.js` so that it supports multiple event types.
+
+> WRAP THE MESSAGE BUILDER IN A SWITCH STATEMENT.   MORE MODULES?
+
+## OTHER LISTENERS
+
+You may prefer to receive notifications using other listeners, like Slack or SMS text message.  Here's how you might adapt the code we've made for other uses.
+
+> SHOW AWS SNS USAGE
+
+##Sending Custom Request Headers
 In addition, you may send custom HTTP request headers once you set up the webhook in SyncSketch. (If you need to send any data in the webhook, this is the only way SyncSketch currently supports doing so.) 
 
 This is usually used to send authentication tokens, but our example listener is only going to look for one custom header in the request - the Discord webhook URL.  Currently we have it hard-coded in our Lambda, which is good for security.  But for the sake of illustration, we will pass it along as a custom header.  By passing in a webhook URL, you can use the same Lambda function for any Discord server channel.  
 
 Normally, Lambda only provides your handler function with body content from the message, but later we will configure it to pass along the headers as well.
+
+
