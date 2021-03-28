@@ -27,11 +27,31 @@ If you don't already have an account, go ahead and go to [aws.amazon.com](https:
 ## Setting Up Your Discord Server
 Once you have a Discord account, setting up your own server is amazingly simple, and can be done in about two minutes.
 
-> DOCUMENT SETTING UP DISCORD SERVER
+In the desktop version of Discord:
 
-> DOCUMENT SETTING UP THE WEBHOOK
+1. Click the green icon with the plus to create a server.  
+![add a server](assets/discord-add-a-server.png)
 
-Now that you have the magic URL, let's take it to AWS.
+2. Choose **Create My Own**, then **For Me and My Friends**.
+3. Give the new server a name.  Icon is optional.
+
+Now that you have a server, let's set up a webhook for it.
+
+1. Click the plus sign next to "Text Channels" and create a new text channel called "**project-notifications**"
+
+
+2. Click the gear icon next to project-notifications in the list at the left.  
+![Opening Channel settings](assets/discord-edit-channel.png)
+3. Click **Integrations** in the nav bar at the left. ![Discord's Integrations Tab](assets/discord-integrations-tab.png)
+
+
+4. Click **Create Webhook**.
+5. Name it "**Status Changes**".
+6. Click **Copy Webhook URL**.
+7. Paste the URL somewhere where you can copy it later. (If you lose it, you can still get it from Discord.)
+7. Click Save Changes.
+
+That URL is the webhook; properly-formatted messages ("requests") to that URL will add a message into the project-notifications channel. Now that you have the magic URL, let's take it to AWS.
 
 ## Writing Your Lambda Function
 
@@ -79,12 +99,7 @@ const url = require('url')
 
 function webhook(message, wh, project) {
     return new Promise((resolve, reject) => {
-        var whurl;
-        if( !wh ) {
-            reject(Error(`Missing X-Discord-Listener header`));
-        } else {
-            whurl = url.parse(wh);
-        }
+        const rsrc = (url.parse(wh)).pathname;
         const payload = JSON.stringify({
             'username': project + ' on SyncSketch',
             'content':  message
@@ -93,7 +108,7 @@ function webhook(message, wh, project) {
             hostname: 'discordapp.com',
             headers: {'Content-type': 'application/json'},
             method: "POST",
-            path: whurl.pathname, 
+            path: rsrc, 
         };
         var bufferData = '';
         const req = https.request(options, (res) => {
@@ -135,6 +150,7 @@ For Discord, this bit here is the magic:
 Discord wants a JSON object in the body containing  `username` and `content` text strings and that's it.  Everything else you see here is about building a webhook message of our own and doing some error-checking, then sending it and relaying Discord's response back to `index.js`.
 
 ###Deploying the Function
+
 Every time you change the code in here, you need to *deploy* it, so let's do that.
 
 > DOCUMENT THE DEPLOY UX
@@ -232,7 +248,7 @@ To use Postman:
 
 Nw you can replace the default text with your sspecific details, like the URL for the API Gateway
 
-If you Send your request and receive a response code of 200, you should be ready to go.  In your SyncSketch account, trigger the event that you want notifications about, and give it a try!
+If you send your request and receive a response code of 200, you should be ready to go.  In your SyncSketch account, trigger the event that you want notifications about, and give it a try!
 
 > TROUBLESHOOTING
 
@@ -241,17 +257,15 @@ Each event notification will have a different JSON data structure in its body.  
 
 > WRAP THE MESSAGE BUILDER IN A SWITCH STATEMENT.   MORE MODULES?
 
-## OTHER LISTENERS
+## Other Listeners
 
 You may prefer to receive notifications using other listeners, like Slack or SMS text message.  Here's how you might adapt the code we've made for other uses.
 
 > SHOW AWS SNS USAGE
 
 ##Sending Custom Request Headers
-In addition, you may send custom HTTP request headers once you set up the webhook in SyncSketch. (If you need to send any data in the webhook, this is the only way SyncSketch currently supports doing so.) 
 
-This is usually used to send authentication tokens, but our example listener is only going to look for one custom header in the request - the Discord webhook URL.  Currently we have it hard-coded in our Lambda, which is good for security.  But for the sake of illustration, we will pass it along as a custom header.  By passing in a webhook URL, you can use the same Lambda function for any Discord server channel.  
+You may wish to send data specific to your account along with each webhook message, such as an authentication token.  SyncSketch does not currently allow you to specify anything to be added to the body of the messages, but it does let you add custom HTTP headers in the request. Normally, Lambda only provides your handler function with body content from the message, so we will need to configure it to pass along the headers as well.
 
-Normally, Lambda only provides your handler function with body content from the message, but later we will configure it to pass along the headers as well.
-
+Currently we have our Discord webhook URL hard-coded in our Lambda.  This is good for security, but not so good for versatility. To illustrate the configuration details we're going to update our example listener to accept Discord webhook URLs as a custom header, in order to allow you to use this one Lambda function for any Discord server channel.
 
