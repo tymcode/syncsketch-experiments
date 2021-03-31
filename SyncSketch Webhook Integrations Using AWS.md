@@ -104,7 +104,8 @@ Next, we'll add the line that triggers the webhook message to be sent. This will
         })
         .catch(error => cb(error));
 ```
-###Add the Webhook Sender
+### Add the Webhook Sender
+
 Finally, we'll add the `webhook()` function that we are using to send the webhook message to Discord.  You don't need to know much about this code, except that it creates and sends its own webhook request, formatting the message that we give it into the appropriate format for Discord.  Just paste it in after the last line of `index.js`:
 
 ```
@@ -206,7 +207,7 @@ Delete all of the code from `index.js`. Copy these first lines and paste them in
 3. Then after those lines, append the lines from the "Add the Webhook Sender" section above.
 4. Finally, replace the Discord webhook URL in the example with your own, according to the procedire described in the "Nothing posts to Discord" solution above. 
 
-##Creating the API Gateway
+## Creating the API Gateway
 
 Message traffic coming into a Lambda function like this one generally must come through an *API Gateway*, so let's add one.
 
@@ -261,7 +262,7 @@ For Discord, this bit here is the magic:
 ```
 Discord wants a JSON object in the body containing  `username` and `content` text strings and that's it.  Everything else you see here is about building a webhook message of our own and doing some error-checking, then sending it and relaying Discord's response back to `index.js`.
 
-##Writing your Webhook Listener
+## Writing your Webhook Listener
 
 Now we'll get the Lambda function to handle real input.
 
@@ -305,7 +306,7 @@ Now test it again, and verify that the body data is being formatted correctly in
 
 > SPEND SOME TIME WITH TROUBLESHOOTING TIPS HERE
 
-##Adding the API Gateway
+## Adding the API Gateway
 
 For messages from SyncSketch to get routed to your Lambda, they must go through a gateway.  So now it's time to add an API Gateway to your Lambda.
 
@@ -358,7 +359,7 @@ You may prefer to receive notifications using other listeners, like Slack or SMS
 
 > SHOW AWS SNS USAGE
 
-##Sending Custom Request Headers
+## Sending Custom Request Headers
 
 You may wish to send data specific to your account along with each webhook message, such as an authentication token.  SyncSketch does not currently allow you to specify anything to be added to the body of the messages, but it does let you add custom HTTP headers in the request. Normally, Lambda only provides your handler function with body content from the message, so we will need to configure it to pass along the headers as well.
 
