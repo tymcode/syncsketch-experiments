@@ -10,6 +10,8 @@ This post will discuss the rquired code and the AWS configuration details.  We w
 
 Discord supports webhooks, in the sense that you can start your own server and build a URL that will post incoming messages into a chat channel on that server. Discord expects incoming messages to be in a particular format, but SyncSketch does not currently allow users to specify the output format of its webhooks.  So in this case we are going to create an intermediary function that listens for the SyncSketch webhooks and uses the information in that message to build a new message in the right format for Discord, then sends its own webhook to Discord.
 
+[TOC]
+
 The sequence of steps is as follows:
 
 1. Get an AWS account
@@ -104,7 +106,7 @@ Next, we'll add the line that triggers the webhook message to be sent. This will
         })
         .catch(error => cb(error));
 ```
-### Add the Webhook Sender
+## Adding the Webhook Sender
 
 Finally, we'll add the `webhook()` function that we are using to send the webhook message to Discord.  You don't need to know much about this code, except that it creates and sends its own webhook request, formatting the message that we give it into the appropriate format for Discord.  Just paste it in after the last line of `index.js`:
 
@@ -151,7 +153,7 @@ function webhook(message, wh) {
 
 Let's test it to see how we're doing so far.  This should be enough code to do something gratifying.  
 
-### Creating a Test Event
+## Creating a Test Event
 Lambda functions respond to *events*.  The events we are concerned with will be approval status changes in SyncSketch.  Now we are going to create a test event that will eventually simulate a message coming from SyncSketch.  
 
 Just above the code window is a Test button that will trigger an event.  Click the triangle next to it and choose **Configure Test Event**.
@@ -182,10 +184,10 @@ Click the big orange **Deploy** button.
 ### Troubleshooting
 Computers were made to disappoint. Writing code is no exception.  Here are some troubleshooting tips if you're not seeing the Discord message when you click Test.
 
-##### Nothing posts to Discord
+### Nothing posts to Discord
 If everything seems OK and you're getting a status code of 200 back but nothing is appearing in Discord, the problem is surely in the webhook URL in the `path` variable.  Go back into Discord and open the settings gear next to your server's "project-notifications" channel. Click **Integrations**, then **View Webhooks**. Select your "Status Changes" webhook and click **Copy Webhook URL**.  Paste it between the double-quotes after `path=`.
 
-##### Getting errors that suggest a problem with my code
+### Getting errors that suggest a problem with my code
 If you're getting JavaScript errors, rebuild your JavaScript as follows:
 
 Delete all of the code from `index.js`. Copy these first lines and paste them in:
@@ -205,7 +207,7 @@ Delete all of the code from `index.js`. Copy these first lines and paste them in
 	exports.handler = handler;
 
 3. Then after those lines, append the lines from the "Add the Webhook Sender" section above.
-4. Finally, replace the Discord webhook URL in the example with your own, according to the procedire described in the "Nothing posts to Discord" solution above. 
+4. Finally, replace the Discord webhook URL in the example with your own, according to the procedure described in the "Nothing posts to Discord" solution above. 
 
 ## Creating the API Gateway
 
@@ -219,6 +221,7 @@ Click the **Add Trigger** button.
 ![Add Trigger](./assets/lambda-add-trigger.png)
 
 From the popup in the following dialog, select **API Gateway**.
+
 ![Add Trigger](./assets/lambda-add-gateway.png)
 
 For the trigger configuration we will create an *open REST API*:
@@ -233,7 +236,9 @@ For the trigger configuration we will create an *open REST API*:
 By default the name will be `discord-wh-relay-API`.  Click it to configure it.
 
 ### Testing from the Gateway
+
 1. Click Test.  The following big dialog will appear.
+
 ![Gateway Config Dialog](./assets/lambda-gateway-config.png)
 
 
