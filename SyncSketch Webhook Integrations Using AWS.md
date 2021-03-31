@@ -57,73 +57,84 @@ That URL is the webhook; properly-formatted messages ("requests") to that URL wi
 
 Back in AWS, log into the console.  This will present you with a dizzying list of services.  For this section, the service we're interested in is Lambda.  Find it on the page and open it.
 
-Make a note of the Region you're "in".  In this example, this account is working in the AWS region "Oregon (us-west-2)". A notion peculiar to AWS is that your services and functions are associated with a particular region, so if you're not in the right region (or referencing it) you will be wondering why your function is missing.
+Make a note of the Region you're "in".  In this example, this account is working in the AWS region "N. California (us-west-1)". A notion peculiar to AWS is that your services and functions are associated with a particular region, so if you're not in the right region (or referencing it) you will be wondering why your function is missing.
 
-> DOCUMENT CREATING THE LAMBDA WITH SCREENIES
- 
-In the Code view, there is an example handler that will be triggered by an incoming message.  We're going to have it call to a function we'll write in a separate module.
+1. Click on the Functions section in the nav bar and select **Create function**
+2. Click Author from Scratch.
+3. Give your function a name.  In this example we'll call it `discord-wh-relay`.
+4. Leave everything else at the defaults and select **Create function**.  For this example, we'll be writing in JavaScript, so Node.js is appropriate.
+5. The view that appears should have a **Code source** section.  A folder labeled **discord-wh-relay will be selected, with an `index.js` file just underneath.
+6. Double-click `index.js`.  This will reveal a little code template for the *handler* that will handle the incoming webhook from SyncSketch.
+7. Delete the `// TODO implement` line 
+8. Where that line was, let's put in the Discord webhook URL and assign it to a variable:
 
-> Document creating the toDiscord module
+`var path ="`*paste-your-discord-webhook-url-between-the-quotes*`";`
 
-For now, in `index.js` we will `require` the new module so it can access it, and then immediately call the module with some fake data.  Replace the contents of `index.js` with this:
+Next, we'll add a dummy message for now, right where the line you just deleted was:
 
-```
-const toDiscord = require('./to_discord_wh').webhook;
+`const message = 'Jerome Newton changed the approval status of "GroomFaintsWIP_5.mp4" in the "Wedding Scene" review from **In Progress** to **Approved**';`
 
-function handler (event, ctx, cb) {
-    
-    // Webhook URL from your Discord server
-    var path = "https://discordapp.com/api/webhooks/816374427297251368/7MXqgVkBv0-fDb7KfOE4yprYcncB5wMwbGAaYhMKEfpjPNhRMYhXK5dz3lbR0tkO7_lW";
-    
-    var projectName = "My Great Film";
-
-    //Dummy message
-    var message = 'Jerome Newton changed the approval status of "GroomFaintsWIP_5.mp4" in the "Wedding Scene" review from **In Progress** to **Approved**';
-
-    toDiscord(message, path, projectName)
-    .then( (result) => {
-        console.log(JSON.stringify(result, null, '\t'));
-        cb( null, JSON.stringify(result) );
-    })
-    .catch( error => cb(error));
-}
-
-exports.handler = handler;
-```
-
-Now that we're sending a dummy message to `to_discord_wh.js`, we can write that code:
+Add these lines before the first line:
 
 ```
 const https = require('https');
-const url = require('url')
+const url = require('url');
+```
+The code for index.js should now look like this:
 
-function webhook(message, wh, project) {
+```
+const https = require('https');
+const url = require('url');
+
+function handler(event, ctx, cb) {
+    const path = "https://discord.com/api/webhooks/825812896431996938/og_Gr7e84y54iuFPU24Coqwgxsw7On1SmQbCFYB__GC9Pj-Q4UlZqBBpmb88MIB19iHf";
+    const message = JSON.stringify(`Jerome Newton changed the approval status of **GroomFaintsWIP_5.mp4** in the **Wedding Scene** review from **In Progress** to **Approved**`);  
+
+}
+exports.handler = handler;
+
+```
+
+Next, we'll add the line that triggers the webhook message to be sent. This will replace the lines between where the `message` is defined and before that last curly brace (`}`):
+
+```
+        webhook(message, path)
+        .then((result) => {
+            cb(null, JSON.stringify(result));
+        })
+        .catch(error => cb(error));
+```
+###Add the Webhook Sender
+Finally, we'll add the `webhook()` function that we are using to send the webhook message to Discord.  You don't need to know much about this code, except that it creates and sends its own webhook request, formatting the message that we give it into the appropriate format for Discord.  Just paste it in after the last line of `index.js`:
+
+```
+function webhook(message, wh) {
     return new Promise((resolve, reject) => {
-        const rsrc = (url.parse(wh)).pathname;
+        const whurl = url.parse(wh);
         const payload = JSON.stringify({
-            'username': project + ' on SyncSketch',
+            'username': 'SyncSketch',
             'content':  message
         });
         const options = {
             hostname: 'discordapp.com',
             headers: {'Content-type': 'application/json'},
             method: "POST",
-            path: rsrc, 
+            path: whurl.path, 
         };
         var bufferData = '';
         const req = https.request(options, (res) => {
-            res.on("data", (data) => bufferData += data);
+            res.on("data", (data) => {
+                bufferData += data;
+            });
             res.on("end",  () => {
-                let data = {};
-                try {
+                let data = {message: 'Webhook message sent!'};
+                if(bufferData.length) {
                     data = JSON.parse(bufferData);
-                } catch (e) {}
-                
-                console.log(`Response is ${data.code ? bufferData : 'empty'}\n`);
+                }
                 if(data.code) {
-                    reject(Error(`Error ${data.code}: ${data.message}`));
+                    reject(JSON.stringify({statusCode:data.code, body:data.message}));
                 } else {
-                    resolve(res.statusCode);
+                    resolve({statusCode: 200, body: data.message});
                 }
             });
         });
@@ -135,9 +146,109 @@ function webhook(message, wh, project) {
         req.end();
     });
 }
-
-exports.webhook = webhook;
 ```
+
+Let's test it to see how we're doing so far.  This should be enough code to do something gratifying.  
+
+### Creating a Test Event
+Lambda functions respond to *events*.  The events we are concerned with will be approval status changes in SyncSketch.  Now we are going to create a test event that will eventually simulate a message coming from SyncSketch.  
+
+Just above the code window is a Test button that will trigger an event.  Click the triangle next to it and choose **Configure Test Event**.
+
+![Configure Test Event Popup](./assets/lambda-configure-test-event.png)
+
+In the dialog that appears, a test event template called `hello-world` will appear, which is suitable place to start.  Rename it "**approvalStatusChange**" and for now we'll leave everything else the way it is:
+
+![Configure Test Event Dialog](./assets/lambda-configure-test-event-dialog.png)
+
+Click **Create** at the bottom of the dialog.
+
+If you click **Test** now, the code tab will be replaced with a console tab that displays unformatted text.  No message appears in Discord, and the console shows this raw response data:
+
+```
+{
+  "statusCode": 200,
+  "body": "\"Hello from Lambda!\""
+}
+```
+
+Wait, where is that coming from?  What's going on?  The answer is that you need to *deploy* the new code before you test it.  Think of it like a Save button, or more aptly the Publish button in a blogging app.  Every time you change the code in here, you need to deploy it, so let's do that.  
+
+Click the big orange **Deploy** button.
+
+*Now* you can click **Test**.  If all is well, you should hear a "bloop" and your test message should appear in Discord!
+
+### Troubleshooting
+Computers were made to disappoint. Writing code is no exception.  Here are some troubleshooting tips if you're not seeing the Discord message when you click Test
+
+#### Nothing posts to Discord
+If everything seems OK and you're getting a status code of 200 back but nothing is appearing in Discord, the problem is surely in the webhook URL in the `path` variable.  Go back into Discord and open the settings gear next to your server's "project-notifications" channel. Click **Integrations**, then **View Webhooks**. Select your "Status Changes" webhook and click **Copy Webhook URL**.  Paste it between the double-quotes after `path=`.
+
+#### Getting errors that suggest a problem with my code
+If you're getting JavaScript errors, rebuild your JavaScript as follows:
+
+Delete all of the code from `index.js`. Copy these first lines and paste them in:
+
+	const https = require('https');
+	const url = require('url');
+	
+	function handler(event, ctx, cb) {
+	    const path = "https://discord.com/api/webhooks/825812896431996938/og_Gr7e84y54iuFPU24Coqwgxsw7On1SmQbCFYB__GC9Pj-Q4UlZqBBpmb88MIB19iHf";
+	    const message = JSON.stringify(`Jerome Newton changed the approval status of **GroomFaintsWIP_5.mp4** in the **Wedding Scene** review from **In Progress** to **Approved**`);  
+	    webhook(message, path)
+	    .then((result) => {
+	        cb(null, JSON.stringify(result));
+	    })
+	    .catch(error => cb(error));
+	}
+	exports.handler = handler;
+
+3. Then after those lines, append the lines from the "Add the Webhook Sender" section above.
+4. Finally, replace the Discord webhook URL in the example with your own, according to the procedire described in the "Nothing posts to Discord" solution above. 
+
+##Creating the API Gateway
+Message traffic coming into a Lambda function like this one generally must come through an *API Gateway*, so let's add one.
+
+Scroll to the top of your function's page.
+> SCREENIE
+
+Click the **Add Trigger** button. 
+
+![Add Trigger](./assets/lambda-add-trigger.png)
+
+From the popup in the following dialog, select **API Gateway**.
+![Add Trigger](./assets/lambda-add-gateway.png)
+
+For the trigger configuration we will create an *open REST API*:
+
+![Gateway Config Dialog](./assets/lambda-gateway-config.png)
+
+1. Leave **Create an API** selected.
+2. Choose the **REST API** box
+3. Under **Security**, select **Open**
+4. Click **Add**
+
+By default the name will be `discord-wh-relay-API`.  Click it to configure it.
+
+### Testing from the Gateway
+1. Click Test.  The following big dialog will appear.
+![Gateway Config Dialog](./assets/lambda-gateway-config.png)
+
+
+2. Set the Method to POST.
+3. 
+
+
+The dummy message should show up in your Discord server like so:
+
+> SCREENIE
+
+If so, so far so good!  If not, check the following:
+
+* The URL for your Discord webhook is in quotes in the `path` specified in `index.js`
+* You deployed your changes in the function
+* Your dummy message has the correct syntax.  Pay attention to the use of single quotes and double quotes in the example
+* ...
 
 For Discord, this bit here is the magic:
 
@@ -148,26 +259,6 @@ For Discord, this bit here is the magic:
         });
 ```
 Discord wants a JSON object in the body containing  `username` and `content` text strings and that's it.  Everything else you see here is about building a webhook message of our own and doing some error-checking, then sending it and relaying Discord's response back to `index.js`.
-
-###Deploying the Function
-
-Every time you change the code in here, you need to *deploy* it, so let's do that.
-
-> DOCUMENT THE DEPLOY UX
-
-At this point, we can test it. Make sure the `index.js` tab is selected, and click the "test" button.  You'll be prompted to create a test event; the "Hello World event template will do the trick.  Name your test event "WebhookTrigger" and click Test.
-> VERIFY UX FLOW
-
-The dummy message should show up in your Discord server like so:
-
-> SCREENIE
-
-If so, so far so good!  If not, check the following:
-
-* The URL for your Discord webhook is in quotes in the `path` specified in `index.js'
-* You deployed the function
-* Your dummy message has the correct syntax.  Pay attention to the use of single quotes and double quotes in the example
-* ...
 
 ##Writing your Webhook Listener
 Now we'll get the Lambda function to handle real input.
