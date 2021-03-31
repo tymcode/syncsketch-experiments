@@ -179,12 +179,12 @@ Click the big orange **Deploy** button.
 *Now* you can click **Test**.  If all is well, you should hear a "bloop" and your test message should appear in Discord!
 
 ### Troubleshooting
-Computers were made to disappoint. Writing code is no exception.  Here are some troubleshooting tips if you're not seeing the Discord message when you click Test
+Computers were made to disappoint. Writing code is no exception.  Here are some troubleshooting tips if you're not seeing the Discord message when you click Test.
 
-#### Nothing posts to Discord
+##### Nothing posts to Discord
 If everything seems OK and you're getting a status code of 200 back but nothing is appearing in Discord, the problem is surely in the webhook URL in the `path` variable.  Go back into Discord and open the settings gear next to your server's "project-notifications" channel. Click **Integrations**, then **View Webhooks**. Select your "Status Changes" webhook and click **Copy Webhook URL**.  Paste it between the double-quotes after `path=`.
 
-#### Getting errors that suggest a problem with my code
+##### Getting errors that suggest a problem with my code
 If you're getting JavaScript errors, rebuild your JavaScript as follows:
 
 Delete all of the code from `index.js`. Copy these first lines and paste them in:
@@ -207,6 +207,7 @@ Delete all of the code from `index.js`. Copy these first lines and paste them in
 4. Finally, replace the Discord webhook URL in the example with your own, according to the procedire described in the "Nothing posts to Discord" solution above. 
 
 ##Creating the API Gateway
+
 Message traffic coming into a Lambda function like this one generally must come through an *API Gateway*, so let's add one.
 
 Scroll to the top of your function's page.
@@ -261,6 +262,7 @@ For Discord, this bit here is the magic:
 Discord wants a JSON object in the body containing  `username` and `content` text strings and that's it.  Everything else you see here is about building a webhook message of our own and doing some error-checking, then sending it and relaying Discord's response back to `index.js`.
 
 ##Writing your Webhook Listener
+
 Now we'll get the Lambda function to handle real input.
 
 As input, the SyncSketch webhook will send JSON in the body of the message that looks something like this, which is what is sent with the `item_approval_status_changed` event:
@@ -304,6 +306,7 @@ Now test it again, and verify that the body data is being formatted correctly in
 > SPEND SOME TIME WITH TROUBLESHOOTING TIPS HERE
 
 ##Adding the API Gateway
+
 For messages from SyncSketch to get routed to your Lambda, they must go through a gateway.  So now it's time to add an API Gateway to your Lambda.
 
 > DOCUMENT CONFIGURING THE API GATEWAY
@@ -344,6 +347,7 @@ If you send your request and receive a response code of 200, you should be ready
 > TROUBLESHOOTING
 
 ## Other Events
+
 Each event notification will have a different JSON data structure in its body.  If you require more than one notification type, you will need to determine the event type before you build the Discord message.  For this reason, we will add a little more complexity to `index.js` so that it supports multiple event types.
 
 > WRAP THE MESSAGE BUILDER IN A SWITCH STATEMENT.   MORE MODULES?
