@@ -151,6 +151,16 @@ function webhook(message, wh) {
 }
 ```
 
+For Discord, this bit here is the magic:
+
+```
+        const payload = JSON.stringify({
+            'username': 'SyncSketch',
+            'content':  message
+        });
+```
+Discord wants a JSON object in the body containing  `username` and `content` text strings and that's it.  Everything else you see here is about building a webhook message of our own and doing some error-checking, then sending it and relaying Discord's response back.
+
 Let's test it to see how we're doing so far.  This should be enough code to do something gratifying.  
 
 ## Creating a Test Event
@@ -213,10 +223,7 @@ Delete all of the code from `index.js`. Copy these first lines and paste them in
 
 Message traffic coming into a Lambda function like this one generally must come through an *API Gateway*, so let's add one.
 
-Scroll to the top of your function's page.
-> SCREENIE
-
-Click the **Add Trigger** button. 
+Scroll to the top of your function's page and click the **Add Trigger** button. 
 
 ![Add Trigger](./assets/lambda-add-trigger.png)
 
@@ -233,39 +240,43 @@ For the trigger configuration we will create an *open REST API*:
 3. Under **Security**, select **Open**
 4. Click **Add**
 
-By default the name will be `discord-wh-relay-API`.  Click it to configure it.
+By default the name will be `discord-wh-relay-API`:  
+
+![lambda-added-trigger](./assets/lambda-added-trigger.png)
+
+In the **Triggers** section, click the linked name to configure it.
+
+##Configuring the API Gateway
+The new tab that appears is used to configure a new API gateway.  The good news is that the way it's set up by default will work just fine for our purposes; all we need to do is deploy it from the dropdown:
+
+![Deploying the API](./assets/gateway-deploy.png)
+
+In the dialog that follows, set the **Deployment stage** to `default` and click **Deploy**.  Once deployed, the API Gateway page will now have the all-important **Invoke URL** at the top of the Stages section – this is the URL we will have SyncSketch send to.
+
+![Getting the Invoke URL](./assets/gateway-stages-url.png)
+
 
 ### Testing from the Gateway
 
-1. Click Test.  The following big dialog will appear.
+1. Click on the Resources link in the nav bar at the left.
+2. Click "**ANY** under **/discord-wh-relay-API`
+3. Click Test.  The following big dialog will appear.
 
-![Gateway Config Dialog](./assets/lambda-gateway-config.png)
+![Gateway Config Dialog](./assets/gateway-test-setup.png)
 
+4. Set the Method to POST, since that is the HTTP method used to send webhook messages.
+ 
+The Discord bloop should sound and your dummy message should appear again in your Discord channel.  It is now available through a public API.  
 
-2. Set the Method to POST.
-3. 
+### Troubleshooting
 
-
-The dummy message should show up in your Discord server like so:
-
-> SCREENIE
-
-If so, so far so good!  If not, check the following:
+If the API gateway test fails, check the following:
 
 * The URL for your Discord webhook is in quotes in the `path` specified in `index.js`
 * You deployed your changes in the function
 * Your dummy message has the correct syntax.  Pay attention to the use of single quotes and double quotes in the example
 * ...
 
-For Discord, this bit here is the magic:
-
-```
-        const payload = JSON.stringify({
-            'username': project + ' on SyncSketch',
-            'content':  message
-        });
-```
-Discord wants a JSON object in the body containing  `username` and `content` text strings and that's it.  Everything else you see here is about building a webhook message of our own and doing some error-checking, then sending it and relaying Discord's response back to `index.js`.
 
 ## Writing your Webhook Listener
 
@@ -287,7 +298,7 @@ As input, the SyncSketch webhook will send JSON in the body of the message that 
   "item_creator": {
     "id": 1,
     "name": "Mike Jennings",
-    "email": "tymcode@gmail.com"
+    "email": "jennings@example.com"
   },
   "new_status": "approved",
   "project": {
@@ -303,23 +314,22 @@ We will pull the values from this data structure to build the message that gets 
 
 > DOCUMENT REPLACING THE DUMMY MESSAGE WITH A TEMPLATE STRING
 
-To test this, we will need to send a message that has a body. Copy the example body above and replace the body data in the WebHookTrigger test event.
+### Testing the Update
 
-> DOCUMENT UPDATING THE TEST EVENT
+To test this, we will need to send a message that has a body. Copy the example body above and replace the body data in the `approvalStatusChange` test event.
+
+1. Reopen the tab for your Lambda function: **Lambda > Functions > discord-wh-relay**.
+2. Click the Test tab.
+3. Paste the example body content into the text area below `approvalStatusChange`, replacing what was there by default:
+
+![Adding a Body to the Test Event](./assets/lambda-test-event-body.png)
+
+
 
 Now test it again, and verify that the body data is being formatted correctly in the Discord chat.
 
 > SPEND SOME TIME WITH TROUBLESHOOTING TIPS HERE
 
-## Adding the API Gateway
-
-For messages from SyncSketch to get routed to your Lambda, they must go through a gateway.  So now it's time to add an API Gateway to your Lambda.
-
-> DOCUMENT CONFIGURING THE API GATEWAY
-
-We can test it within the API Gateway console.
-
-> DOCUMENT THE BUILT IN TEST
 
 If this succeeds then it should be accessible from the outside world.  Let's have a look.
 
