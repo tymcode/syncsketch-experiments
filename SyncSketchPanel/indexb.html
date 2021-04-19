@@ -1,0 +1,134 @@
+<!doctype html>
+
+<html lang="en">
+	<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<meta name="description" content="">
+	<title>SyncSketch Annotation Importer</title>
+	<script>window.jQuery || document.write('<script src="lib/jquery-1.9.1.js"><\/script>')</script>
+	<script type="text/javascript" src="lib/underscore-min.js"></script>
+	<script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/jquery.validate.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/additional-methods.min.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+			$( "#ssUsername" ).blur(function(){
+				console.log("Validating email")
+				$(this).validate({
+					rules: {
+						username: {
+						required: true,
+						email: true
+						}
+					}
+				});
+			})
+			$( "#ssUsername" ).focus(function(){
+			
+				
+			})
+		})
+		const SS_PROJECTS = "https://syncsketch.com/api/v1/project/?"
+		var SS = {};
+		SS.USER = 'tymcode@gmail.com';
+		SS.USER_ID = '33069';
+		SS.USERDATA = {"APIkey": "3cb69937476d84f9e146e7b354be742ca40740e2", "about": null, "account_id": 21060, "account_sso_provider": false, "account_type": "starter", "avatar_number": 1, "color": "#7266ff", "date_joined": "2018-10-07T22:02:19Z", "email": "tymcode@gmail.com", "email_verified": false, "employer": null, "first_name": "Mike", "full_name": "Mike Jennings", "id": 33069, "initials": "MJ", "is_active": true, "item_count": 2, "last_login": "2018-10-23T07:17:27Z", "last_name": "Jennings", "mail_activity": true, "mail_added": false, "mail_newsletter": true, "mail_tips": true, "occupation": null, "preferences": [{"id": 4924, "key": "showWelcomeDialog", "value": "no"}], "project_count": 0, "stripe_id": "cus_DkFPxFLkEw63Ws", "thumbnail": "userData/33069/img/33069_20181007150752.jpg", "thumbnail_url": "https://syncsketch-data.global.ssl.fastly.net/userData/33069/img/33069_20181007150752.jpg", "title": null, "username": "tymcode@gmail.com", "website": null}
+		SS.PROJECTS = fetchProjects();
+
+
+		function fetchProjects() {
+			var apiData = {
+				"api_key": "3cb69937476d84f9e146e7b354be742ca40740e2",
+				"username": "tymcode@gmail.com"
+			}
+			$.getJSON( SS_PROJECTS, apiData, function( data ) {
+				var items = [];
+				$.each( data.objects, function( key, val ) {
+					items.push( "<option value='" + val.id + "'>" + JSON.stringify(val.name) + "</option>");
+				});
+				
+				$( "<select/>", {
+					"class": "projectList",
+					html: items.join( "" )
+				}).appendTo( "body" );
+	});
+				function loadProjectPopup(result) {
+					$("ConsoleWindow").append(result);
+
+				}
+
+				function errHdl(err) {
+					console.log("Hmm, something went wrong: " + err.message);
+				}
+
+				function complHndl() {
+					console.log("Done.");
+				}
+
+				
+			}
+
+
+
+
+
+	</script>
+	<link rel="stylesheet" href="css/style.css">
+	<link rel="stylesheet" href="css/style2.css">
+	</head>
+
+	<body class="bg-main">
+<div class="icon-bw icon-bg"></div>
+<header>
+      <div id="logo"> </div>
+      <H1>SyncSketch Annotations Importer</H1>
+    </header>
+<a href="javascript:history.go(0)">Refresh panel</a>
+<section id="content">
+      <div id="main">
+    <section id = "premiere">
+    <div>
+    <form id = "ss_user-data">
+          <fieldset>
+        <legend>Premiere</legend>
+        <label>Target Sequence</label>
+        <select id = "sequence-dropdown">
+              <option class = "sequence-item" id ="new-sequence" data-seqid = "" value = ""><em>New Sequence</em></option>
+              <option class = "sequence-item" id ="active-sequence" data-seqid = "3306" value = "3306">Sequence 01 <em>(currently active)</em></option>
+              <option class = "sequence-item" id ="sequence-3307" data-seqid = "3307" value = "3307">Sequence 02 </option>
+              <option class = "sequence-item" id ="sequence-3308" data-seqid = "3308" value = "3308">Sequence 03</option>
+            </select>
+        <label>Timecode Offset</label>
+        <input type="text" id="timecode-offset" />
+      </fieldset>
+          </div>
+          </section>
+          <div class="contentRow">
+          <div>
+          <fieldset id = ss-login>
+          <div class="input flexRow">
+        <label id="ss_user-data" >SyncSketch User ID:</label>
+        <input type = "text" id="ssUsername" name="username" value="tymcode@gmail.com"/>
+      </div>
+          <div class="input flexRow">
+        <label id="ss_user-data">API Key:</label>
+        <input type="text" id = "ss-api_key" value="API Key" />
+      </div>
+          <input type="submit" value="Log In">
+        </form>
+    </fieldset>
+    <div class="input">
+          <label id="ssapi_key">SyncSketch Project Frame Rate:</label>
+          <input type="text" id = "ss_frame_rate" value="23.976" />
+        </div>
+    </fieldset>
+  </div>
+      </div>
+    </section>
+<section id="console">
+      <div id="ConsoleWindow"> </div>
+    </section>
+<script src="https://checkout.stripe.com/checkout.js"></script> 
+<script src="https://www.syncsketch.com/media/dist/syncsketch.pro_dist.8a117381.js" type="text/javascript"></script>
+</body>
+</html>

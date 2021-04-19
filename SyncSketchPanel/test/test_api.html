@@ -1,0 +1,520 @@
+<!doctype html>
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+		<meta name="description" content="">
+		
+		<title>SyncSketch.js API V1 Tester</title>
+		
+		<script>window.jQuery || document.write('<script src="../lib/jquery-1.9.1.js"><\/script>')</script>
+		<script type="text/javascript" src="../lib/syncsketch.js"></script>
+
+		<script type="text/javascript">
+            const username = 'tymcode@gmail.com';
+			const api_key = '3cb69937476d84f9e146e7b354be742ca40740e2';
+			var testId;
+			var testData = {}
+
+			
+			$(document).ready(function(){
+
+				var ss = new SyncSketchAPI(username, api_key);
+				console.log( ss ? `SyncSketch API created`: `No API created!`);
+				test_isConnected()
+ 				.then( res => {
+					 logItem(`API connection successful? ${res.connection}`)
+					 return res;
+				})
+				.catch( res => {
+					logItem(`API connection failed with error ${res.err}`)
+				})
+				.then( res => {
+					return test_getCurrentUser();
+				})
+				.then( res => {
+					logItem( `getCurrentUser(): Response was successful; user ID is ${res.id}` );
+					testData.userId = res.id;
+					testData.userName = res.name;
+				})
+				.catch( res => {
+					logItem(`getCurrentUser(): Failed with error ${res.err}`)
+				}) 
+				.then( () => {
+					return test_getAccounts();
+				})
+				.then( accountId => {
+					logItem( `getAccounts(): Response was successful; Account ID is ${accountId}` );
+					testData.accountId = accountId;
+				})
+				.catch( res => {
+					logItem(`getAccounts(): Failed with error ${res.err}`)
+				})
+				.then( () => {
+					return test_addProject( testData.accountId )
+				})
+				.then( res => {
+					logItem( `addProject(): Response was successful; new project is ID ${res.id}` );
+					testData.projectId = res.id;
+					testData.projectName = res.name;
+				})
+				.catch( err => {
+					logItem( `addProject(): Failed with error "${JSON.stringify(err)}"`)
+					process.exit();
+				})
+				.then( () => {
+					return test_addReview( testData.projectId );
+				})
+				.then( res => {
+					logItem( `addReview(): Response was successful; Review ID is ${res.id}` );
+					testData.reviewId = res.id;
+					testData.reviewName = res.name
+				})
+				.catch( err => {
+					logItem(`addReview(): Failed with error "${JSON.stringify(err)}"`)
+				})
+				.then( () => {
+					return test_getReviewsByProjectId( testData.projectId );
+				})
+				.then( res => {
+					logItem( `getReviewsByProjectId(): Response was successful` );
+				})
+				.catch( err => {
+					logItem(`getReviewsByProjectId(): Failed with error "${JSON.stringify(err)}"`)
+				})
+				.then( () => {
+					return test_addItem( testData.reviewId ) // TODO: Actual video
+				})
+				.then( itemId => {
+					logItem( `addItem(): Response was successful; the ID is ${itemId}` );
+					testData.itemId1 = itemId;
+				})
+				.catch( res => {
+					logItem(`AddItem(): Failed with error ${res.err}`)
+				})
+				.then( () => {
+					return test_getProjects()
+				})
+				.then( res => {
+					logItem( `getProjects(): Response was successful` );
+					return res;
+				})
+				.catch(err => {
+					logItem( `getProjects(): Response was "${JSON.stringify(err)}"` );
+				})
+				.then( res => {
+					return test_getReviewsByProjectId( testData.projectId );
+				})
+				.then( res => {
+					logItem( `getReviewsByProjectId(): Response was successful` );
+					return res;
+				})
+				.catch(err => {
+					logItem( `getReviewsByProjectId(): Response was "${JSON.stringify(err)}"` );
+				})
+				.then( res => {
+					return test_getTree();
+				})
+				.then( res => {
+					logItem( `getTree(): Response was successful` );
+					return res;
+				})
+				.catch(err => {
+					logItem( `getTree(): Response was ${JSON.stringify(err)}` );
+				})
+				.then( res => {
+					return test_getAccounts()
+				})
+				.then( res => {
+					logItem( `getAccounts(): Response was successful` );
+					return res;
+				})
+				.catch(err => {
+					logItem( `getAccounts(): Response was ${JSON.stringify(err)}` );
+				})
+				.then( res => {
+					return test_addUsers(testData.projectId, [{email:'jenningsmike@me.com', permissions: 'viewer'}])
+				})
+				.then( res => {
+					logItem( `addUsers(): Response was successful` );
+					return res;
+				})
+				.catch(err => {
+					logItem( `addUsers(): Response was ${JSON.stringify(err)}` );
+				})
+				.then( res => {
+					return test_getProjectById( testData.projectId );
+				})
+				.then( res => {
+					logItem( `getProjectById(): Response was successful` );
+					return res;
+				})
+				.catch(err => {
+					logItem( `getProjectById(): Response was ${JSON.stringify(err)}` );
+				})
+				.then( res => {
+					return test_getUserById( testData.userId );
+				})
+				.then( res => {
+					logItem( `getUserById(): Response was successful` );
+					return res;
+				})
+				.catch(err => {
+					logItem( `getUserById(): Response was ${JSON.stringify(err)}` );
+				})
+				.then( res => {
+					return test_getUsersByName( testData.userName );
+				})
+				.then( res => {
+					logItem( `getUsersByName(): Response was successful` );
+					return res;
+				})
+				.catch(err => {
+					logItem( `getUsersByName(): Response was ${JSON.stringify(err)}` );
+				})
+				.then( res => {
+					return test_getUsersByProjectId( testData.projectId );
+				})
+				.then( res => {
+					logItem( `getUsersByProjectId(): Response was successful` );
+					return res;
+				})
+				.catch(err => {
+					logItem( `getUsersByProjectId(): Response was ${JSON.stringify(err)}` );
+				})
+				.then( res => {
+					return test_getProjectsByName( testData.projectName );
+				})
+				.then( res => {
+					logItem( `getProjectsByName(): Response was successful` );
+					return res;
+				})
+				.catch(err => {
+					logItem( `getProjectsByName(): Response was ${JSON.stringify(err)}` );
+				})
+				.then( res => {
+					return test_getReviewById( testData.reviewId );
+				})
+				.then( res => {
+					logItem( `getReviewById(): Response was successful` );
+					return res;
+				})
+				.catch(err => {
+					logItem( `getReviewById(): Response was ${JSON.stringify(err)}` );
+				})
+				.then( res => {
+					return test_getReviewByName( testData.reviewName );
+				})
+				.then( res => {
+					logItem( `getReviewByName(): Response was successful` );
+					return res;
+				})
+				.catch(err => {
+					logItem( `getReviewByName(): Response was ${JSON.stringify(err)}` );
+				})
+
+
+
+				function test_isConnected() {
+					logItem("Test login with supplied credentials");
+					return new Promise( ( resolve, reject ) => {
+						ss.isConnected( res => {
+							console.log(`########## isConnected: ${JSON.stringify(res, null, '\t')}`);
+							if(res.err !== undefined) {
+								reject( res );
+							} else {
+								resolve( res );
+							}
+						})
+					})
+				}
+				
+				function test_getAccounts() {
+					logItem('Testing getAccounts()');
+					return new Promise( ( resolve, reject ) => {
+						ss.getAccounts( res => {
+							console.log(`########## getAccounts: ${JSON.stringify(res, null, '\t')}`);
+							if( res.objects !== undefined ) {
+								resolve( res.objects[0].id );
+							} else {
+								reject( res );
+							}
+						})
+					})
+				}
+				
+				function test_getCurrentUser() {
+					logItem('Testing getCurrentUser()');
+					return new Promise( ( resolve, reject ) => {
+						ss.getCurrentUser(res => {
+							console.log(`########## getCurrentUser: ${JSON.stringify(res, null, '\t')}`);
+							if( res.id !== undefined ) {
+								resolve( res );
+							} else {
+								reject( res );
+							}
+						})
+					})
+				}
+				
+				function test_getTree() {
+					logItem('Testing getTree()');
+					return new Promise( ( resolve, reject ) => {
+						ss.getTree( res => {
+							console.log(`########## getTree: ${JSON.stringify(res, null, '\t')}`);
+							if(res[0].active !== undefined) {
+								resolve( res );
+							} else {
+								reject (res );
+							}
+						}, true );
+					})
+				}
+
+				function test_getProjects() {
+					logItem('Test getProjects()');
+					return new Promise( ( resolve, reject ) => {
+						ss.getProjects(res => {
+							console.log(`######## getProjects(): ${JSON.stringify(res, null, '\t')}`);
+							if(res.meta != undefined) {
+								resolve( res );
+							} else {
+								reject( res );
+							}
+						}, true)
+					})
+				}
+				
+				function test_addProject( accountId ) {
+					logItem('Test addProject()');
+					return new Promise( ( resolve, reject ) => {
+						ss.addProject(accountId, "Testing Project", res => {
+							console.log(`######## addProject(): ${JSON.stringify(res, null, '\t')}`);
+							if(res.id !== undefined) {
+								resolve( res );
+							} else {
+								reject( res );
+							}
+						}, 'This project was generated during testing', { is_public: false } )
+					})
+				}
+				
+				function test_addReview( projectId, reviewName = 'Testing Review' ) {
+					logItem('Test addReview()');
+					return new Promise( ( resolve, reject ) => {
+						ss.addReview(projectId, reviewName, res => {
+							if(res.id != undefined) {
+								console.log(`######## addReview(): ${JSON.stringify(res, null, '\t')}`);
+								resolve( res);
+							} else {
+								reject( res );
+							}
+						}, `"${reviewName} was generated during testing`, {is_public:false})
+					})
+				}
+				
+				function test_getUserById( userId ) {
+					logItem('Test getUserById()');
+					return new Promise( ( resolve, reject ) => {
+						ss.getUserById(userId, res => {
+							console.log(`######## getUserById(): ${JSON.stringify(res, null, '\t')}`);
+							if(res.id !== undefined) {
+								resolve( res.id );
+							} else {
+								reject( res );
+							}
+						})
+					})
+				}
+				
+				function test_getReviewById( reviewId ) {
+					logItem('Test getReviewById()');
+					return new Promise( ( resolve, reject ) => {
+						ss.getReviewById(reviewId, res => {
+							console.log(`######## getReviewById(): ${JSON.stringify(res, null, '\t')}`);
+							if(res.id !== undefined) {
+								resolve( res.id );
+							} else {
+								reject( res );
+							}
+						})
+					})
+				}
+				
+				function test_getProjectById( projectId ) {
+					logItem('Test getProjectById()');
+					return new Promise( ( resolve, reject ) => {
+						ss.getProjectById(projectId, res => {
+							console.log(`######## getProjectById(): ${JSON.stringify(res, null, '\t')}`);
+							if(res.id !== undefined) {
+								resolve( res.id );
+							} else {
+								reject( res );
+							}
+						})
+					})
+				}
+				
+				function test_getUsersByName( name ) {
+					logItem('Test getUsersByName()');
+					return new Promise( ( resolve, reject ) => {
+						ss.getUsersByName( name, res => {
+							console.log(`######## getUsersByName(): ${JSON.stringify(res, null, '\t')}`);
+							if(res.objects[0].id !== undefined) {
+								resolve( res.objects[0].id );
+							} else {
+								reject( res );
+							}
+						})
+					})
+				}
+				
+				function test_getReviewByName( name ) {
+					logItem('Test getReviewByName()');
+					return new Promise( ( resolve, reject ) => {
+						ss.getReviewByName( name, res => {
+							console.log(`######## getReviewByName(): ${JSON.stringify(res, null, '\t')}`);
+							if(res.objects[0].id !== undefined) {
+								resolve( res.objects[0].id );
+							} else {
+								reject( res );
+							}
+						}, true)
+					})
+				}
+
+				function test_getProjectsByName( name ) {
+					logItem('Test getProjectsByName()');
+					return new Promise( ( resolve, reject ) => {
+						ss.getProjectsByName( name, res => {
+							console.log(`######## getProjectsByName(): ${JSON.stringify(res, null, '\t')}`);
+							if(res.objects[0].id !== undefined) {
+								resolve( res.objects[0].id );
+							} else {
+								reject( res );
+							}
+						})
+					})
+				}
+				
+				function test_getUsersByProjectId( projectId ) {
+					logItem('Test getUsersByProjectId()');
+					return new Promise( ( resolve, reject ) => {
+						ss.getUsersByProjectId( projectId, res => {
+							console.log(`######## getUsersByProjectId(): ${JSON.stringify(res, null, '\t')}`);
+							if(res.objects[0].id !== undefined) {
+								resolve( res.objects[0].id );
+							} else {
+								reject( res );
+							}
+						})
+					})
+				}
+
+				function test_getReviewsByProjectId( projectId ) {
+					logItem('Test getReviewsByProjectId()');
+					return new Promise( ( resolve, reject ) => {
+						ss.getReviewsByProjectId(projectId, res => {
+							console.log(`######## getReviewsByProjectId(): ${JSON.stringify(res, null, '\t')}`);
+							if(res.meta !== undefined) {
+								resolve( res.id );
+							} else {
+								reject( res );
+							}
+						})
+					})
+				}
+
+
+				function test_getReviewById( reviewId ) {
+					logItem('Test getReviewById()');
+					return new Promise( ( resolve, reject ) => {
+						ss.getReviewById(reviewId, res => {
+							console.log(`######## getReviewById(): ${JSON.stringify(res, null, '\t')}`);
+							if(res.id !== undefined) {
+								resolve( res.id, reviewId );
+							} else {
+								reject( res, reviewId );
+							}
+						})
+					})
+				}
+				
+				function test_addItem( reviewId, path, name = "Testing Item", fps = 24, data = {type: "whiteboard"} ) {
+					logItem('Test addItem()');
+					return new Promise( ( resolve, reject ) => {
+						ss.addItem(reviewId, name, 24, data, res => {
+							if(res.id != undefined) {
+								console.log(`######## addItem(): ${JSON.stringify(res, null, '\t')}`);
+								resolve( res.id, reviewId );
+							} else {
+								reject( res, reviewId );
+							}
+						}, 'This Item was added during testing', {is_public:false})
+					})
+				}
+				
+				function test_addMedia( reviewId ) {
+					logItem('Test addMedia()');
+					return new Promise( ( resolve, reject ) => {
+						ss.addMedia(reviewId, "./test.webm", res => {
+							console.log(`######## addMedia(): ${JSON.stringify(res, null, '\t')}`);
+							if(res.id != undefined) {
+								resolve( res.id, reviewId );
+							} else {
+								reject( res, reviewId );
+							}
+						})
+					})
+				}
+				
+				function test_addUsers( projectId, users = [{ email: 'test@test.de', permission: 'viewer' }] ) {
+					logItem('Test addUsers()');
+					return new Promise( ( resolve, reject ) => {
+						ss = new SyncSketchAPI(username, api_key);
+						ss.addUsers(projectId, users, res => {
+							console.log(`######## addUsers(): ${JSON.stringify(res, null, '\t')}`);
+							if(res.addedUsers != undefined) {
+								resolve( res );
+							} else {
+								reject( res );
+							}
+						})
+					})
+				}
+
+			/*
+				logItem("Test login with bad credentials");
+				ss = new SyncSketchAPI("dev@null", "bogus")
+				ss.isConnected(res => {
+					console.log(JSON.stringify(res));
+                    if(res.err != undefined) {
+                        logItem(`API connection failed with error ${res.err}`);
+                    } else {
+                        logItem(`API connection successful? ${res.connection}`);
+                        console.log("api connection success");
+                    }
+                })
+			*/
+			
+			//connectItemtoReview
+			//updateItem
+			//addMedia
+
+			}); //document.ready
+
+			function logItem(str) {
+				$("#console").append(`<code id = "${testId}">${str}</code><br />`)
+			}
+		
+		</script>
+	</head>
+
+	<body class="bg-main" style = "border: 1px solid grey">
+		<div id = "console">
+            <h2>Test Results:</h2>
+        </div>
+	</body>
+</html>
+

@@ -1,0 +1,329 @@
+<!doctype html>
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+		<meta name="description" content="">
+		
+		<title>SyncSketch Annotation Importer</title>
+		
+		<script>window.jQuery || document.write('<script src="lib/jquery-1.9.1.js"><\/script>')</script>
+		
+		<link rel="stylesheet" href="css/style.css">
+		<link rel="stylesheet" href="css/style2.css">
+		<script type="text/javascript" src="lib/syncsketch.js"></script>
+		<script type="text/javascript" src="lib/ss2pp.js"></script>
+		<script type="text/javascript" src="lib/underscore-min.js"></script>
+		<script type="text/javascript" src="lib/jquery.dynatable.js"></script>
+		<script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/jquery.validate.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/jquery.validation/1.16.0/additional-methods.min.js"></script>
+		<script type="text/javascript">
+			var ss;
+			
+			$(document).ready(function(){
+				
+				$( "#ss-username" ).blur(function(){
+					console.log("Validating email")
+					$(this).validate({
+						rules: {
+							username: {
+							required: true,
+							email: true
+							}
+						}
+					});
+				})
+				
+				$('#reference-in').click( e => {
+					connectItemToReview( $('.itemPopup').val(), $('.reviewPopup').val(), itemData => {
+						console.log("click!")
+						console.log(JSON.stringify(itemData))
+					} )
+				})
+
+				$("#ss-login-button").click( e => {
+					var apiParams = {};
+					e.preventDefault();
+					apiParams.username = $("#ss-username").val();
+					apiParams.api_key = $("#ss-api_key").val();
+					ss = new SyncSketchAPI(apiParams.username, apiParams.api_key)
+					var res = ss.isConnected(function(res) {
+						console.log(`You are${res.connection ? '' : ' NOT'} connected to the API.`)
+						if(res.connection) {
+							$('#ss-login').hide(400, "swing");
+							$('#get-media-item').show(400, 'swing');
+							fetchProjects(ss);
+							fetchItems(ss);
+						}
+					})
+					
+				});
+				
+				// Update Reviews filter popup when projects filter popup is changed
+				$(document).on('change', '.projectPopup', function() {
+					fetchReviews(ss, $('.projectPopup').val());
+				});
+				
+				// Update Items popup when reviews filter popup is changed
+				$(document).on('change', '.reviewPopup', function() {
+					fetchItems(ss, $('.reviewPopup').val());
+				});
+
+				
+				var annotations = [{
+					id: '',
+					creator: '',
+					created: '',
+					frame: '',
+					active: '',
+					text: "Please select from the Media Item popup above"
+				}];
+				
+				var annotationsTable = $("#annotations-list").dynatable({
+					  table: {
+						defaultColumnIdStyle: 'underscore'
+					  },
+					  features: {
+						paginate: false,
+						search: false,
+						recordCount: false,
+						perPageSelect: false
+					  },
+					dataset: {
+					records: annotations
+					}
+				}).data('dynatable')
+
+				
+				//Refresh annotations list when Media Item popup menu is changed
+				$(document).on('change', '.itemPopup', function() {
+					// Set the fps popup to the media item's reported framerate
+					$(`#ss-fps option[value=${$(".itemPopup option:selected").data("fps")}]`).prop('selected', true);
+
+					// Grab some annotations
+					var annotsBaseUrl = "https://syncsketch.com/api/v1/annotation/?";
+					var annotsQuery = ss.apiParams;
+					annotsQuery.item__id = $('.itemPopup').val();
+					annotsQuery.active = 1;
+					annotsQuery.limit = 30; //TODO: make selectable
+					var url = annotsBaseUrl + serialize(annotsQuery);
+					console.log("fetching " + url);
+					$.getJSON(url, function(res) {
+						var annots = parseAnnots(res)
+						annotations = annots;
+						annotationsTable.settings.dataset.originalRecords = annotations;
+						annotationsTable.process();
+						$('#annotation-filters').show(400, 'swing');
+						$('#import-settings').show(400, 'swing');
+						$('#annotation-list-view').show(400, 'swing')
+						//console.log(JSON.stringify(annotations));
+					});
+				});
+			})
+			
+			function parseAnnots(input) {
+				var annots = [];
+				input['objects'].forEach( (item, index) => {
+
+					if(item.text != null) {
+						var theItem = {
+							id: item.id,
+							frame: item.frame,
+							text: item.text,
+							created: item.created,
+						}
+						if(item.publicUserInfo != null){ 
+							theItem.creator = item.publicUserInfo.username;
+						} else {
+							theItem.creator = item.id;
+						 }
+						annots.push(theItem);
+					}
+				})
+				return annots;
+			}
+		
+	</script>
+	</head>
+
+	<body class="bg-main" style = "border: 1px solid grey">
+		<div class="icon-bw icon-bg"></div>
+		<header>
+		  <div id="logo"> </div>
+		  <h1>SyncSketch Annotations Importer</h1>
+		</header>
+		<a href="javascript:history.go(0)">Refresh panel</a>
+		<section id = "pp-settings">
+		<fieldset id = "ppro-target" >
+	    		<legend>Premiere Pro Target Sequence</legend>
+    			<div>
+        	  		<label for = "ppro-target-seq">Target Sequence:</label>
+          			<select id = "ppro-target-seq" name = "ppro-target-seq" >
+        				<option value = "0">Loading…</option>
+      				</select>
+				</div>
+				<div>
+					<label for = "ppro-target-track">Target Track:</label>
+					<select id = "ppro-target-track" name = "ppro-target-track">
+						<option value = "0">Loading…</option>
+				    </select>
+				</div>
+				<div>
+				  <label for = "ppro-tc-offset">Timecode Offset:</label>
+				  <input type="text" name = "ppro-tc-offset" id = "ppro-tc-offset" value="0" />
+				  <span id= "offset-units">frames/time/timecode</span> 
+				</div>
+		  	</fieldset>
+		</section>
+		<section id="ss-settings">
+            <div id = "ss-login">
+              <form id = "ss-login-params">
+                <fieldset id = "ss-apiparams" >
+                  <legend>SyncSketch Credentials</legend>
+                  <div>
+                    <label for="ss-username">SyncSketch User ID:</label>
+                    <input type = "text" id="ss-username" name="ss-username" value="tymcode@gmail.com"/>
+                    </div>
+                  <div>
+                    <label for = "ss-api_key">API Key:</label>
+                    <input type="text" name = "ss-api_key" id = "ss-api_key" value="3cb69937476d84f9e146e7b354be742ca40740e2" />
+                    </div>
+                </fieldset>
+                <button type="submit" form = "ss-login-params" id = "ss-login-button" name = "ss-login-button" class = "grayButton">Log In</button>
+                </form>
+            </div>
+			<form id = "get-media-item"  style="display: none;">
+      		<fieldset id = "ss-source" >
+				<legend> Source Review Item</legend>
+					  <label for = "ss-media" class = "itemList">Media Item:</label>
+	    			<div>
+						<label for = "revisionList">Media Item Revision:</label>
+					</div>
+					<div>
+						<label for = "ss-fps" class = "fpsList">Media Frame Rate:</label>
+						<select id = "ss-fps" name = "ss-fps">
+							<option value = "0">&lt;still&gt;</option>
+							<option value = "11.988">11.988fps</option>
+							<option value = "12">12.00fps</option>
+							<option value = "14.985">14.985fps</option>
+							<option value = "15">15fps</option>
+							<option value = "23.976" selected>23.976fps</option>
+							<option value = "24">24.00fps</option>
+							<option value = "25">25.00fps</option>
+							<option value = "29.97">29.97fps</option>
+							<option value = "30">30.00fps</option>
+							<option value = "50">50.00fps</option>
+							<option value = "59.94">59.94fps</option>
+							<option value = "60">60.00fps</option>
+						</select>
+					</div>
+			</fieldset>
+			<fieldset id = "item-filters">
+				<legend>Item List Filters</legend>
+				<div>
+				  <label for = "ss-project" class = "projectList">Project:</label>
+       	 		</div>
+   	 			<div>
+					<label for = "ss-review" class = "reviewList">Review:</label>
+
+        		</div>
+
+				<button class = "grayButton" id = "reference-in" name = "reference-in">Add by reference</button>
+			</fieldset>
+			</form>
+			<form id = "annotation-filters" style="display: none;">
+			<div id = "ss-basic-filters">
+				
+				
+			<fieldset id = "ss-annotation-filters" >
+				<legend>Annotation Filters</legend>
+					<div id = "ss-revision-filter" style = "display: block">
+						<label for = "ss-filter-revision">Filter by Annotation Revision:</label>
+						<select class = "filter" id = "ss-filter-revision" name = "ss-filter-revision">
+							<option value = "0">&lt;All&gt;</option>
+						</select>
+					</div>
+					
+					<div style = "display: -webkit-flex">
+						<div id = ss-hashtag-filter style = "display: block;" >
+							<label for = "ss-filter-hashtag">Filter by Hashtag:</label>
+							<div class = "scroll-list" id = "list-hashtag">
+								<select class = "filter" id = "ss-filter-hashtag" name = "ss-filter-hashtag">
+
+								  &lt;All&gt;
+								</select>
+							</div>
+						</div>
+						
+						<div id = "ss-author-filter" style="display: block;">
+							<label for = "ss-filter-author">Filter by Author:</label>
+							<div class = "scroll-list" id = "list-author">
+								<select class = "filter" id = "ss-filter-author" name = "ss-filter-author">
+
+								  &lt;All&gt;
+								</select>
+							</div>
+						</div>
+					</fieldset>
+				</div>
+				<div id = "ss-timerange-filters"  style="display: -webkit-flex;">
+					<fieldset >
+						<legend>Filter by Date/Time Range</legend>
+						<div style="display:block">
+							<div style="display: -webkit-flex">
+								<label for = "ss-filter-datetime-from">From: </label>
+								<input type= "datetime-local" id = "ss-filter-datetime-from"/>
+							</div>
+							<div style="display: -webkit-flex">
+								<label for = "ss-filter-datetime-to">To: </label>
+								<input type= "datetime-local" id = "ss-filter-datetime-to"/>
+							</div>
+						</div>
+					</fieldset>
+
+					<fieldset >
+						<legend>Filter by Content Time Range</legend>
+						<div style="display: block">
+							<label for = "ss-filter-contenttime-from">From: </label>
+							<input type= "text" id = "ss-filter-contenttime-from"/>
+							<span id= "time-range-units">frames/time/timecode</span> <br/>
+						</div>
+						<div style="display: block">
+							<label for = "ss-filter-contenttime-to">To: </label>
+							<input type= "text" id = "ss-filter-contenttime-to"/>
+							<span id= "content-time-units">frames/time/timecode</span>
+						</div>
+					</fieldset>
+				</div>
+			<button id = "clear-filters" name="clear-filters" class = "grayButton" >Clear Filters</button>
+		</form>
+  		<form id = "import-settings" style="display: none;">
+      		<fieldset id = "mapping" >
+    			<legend>Import Settings</legend>
+    			<div>
+					<label for = "color-mapping">Color Mapping:</label>
+					<select id = "color-mapping" name = "color-mapping">
+						<option value = "0">Loading…</option>
+			  		</select>
+        		</div>
+  			</fieldset>
+		</form>
+	</section>
+	<section id = "annotation-list-view"  style="display: none;">
+    	<h2>Annotation Import Queue</h2>
+    	<div id="annotations-browser" style = "width: 100%">
+			<table id = "annotations-list" border = "2">
+				<thead>
+				<th>frame</th>
+				<th>created</th>
+				<th>text</th>
+				<th>id</th>
+				</thead>
+				<tbody>
+				</tbody>
+			</table>
+  		</div>
+	</section>
+</body>
+</html>

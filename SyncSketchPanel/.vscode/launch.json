@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "extendscript-debug",
+        "request": "launch",
+        "name": "Run Current Script",
+        "program": "${file}",
+        "stopOnEntry": false,
+        "excludes": [
+          "undefined",
+          "builtin",
+          // "Function",
+          "prototype"
+        ],
+      },
+
+        {
+            "name": "Debug PPro Panel in Chrome",
+            "type": "chrome",
+            "request": "launch",
+            "file": "${workspaceFolder}/index.html"
+        },
+        {
+            "name": "Debug API Tester",
+            "type": "chrome",
+            "request": "launch",
+            "file": "${workspaceFolder}/test/test_api.html"
+        },
+    ]
+}
