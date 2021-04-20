@@ -41,27 +41,38 @@ function frames_to_timecode(frames) {
   // Doesn't like semicolons
   var isValidSMPTETimeCode = new RegExp(/(^(?:(?:[0-1][0-9]|[0-2][0-3]):)(?:[0-5][0-9]:){2}(?:[0-2][0-9])$)/);
 
-function fetchProjects(ss) {
-    var apiData = ss.apiParams;
+async function fetchProjects(ss) {
     $('.projectPopup').remove();
-    ss.getProjects( res => { buildPopup( res, 'project') } );
+    let accts = await ss.getAccounts( true, 'id')
+    let res = await ss.getProjects( accts[0] ); 
+    buildPopup( res, 'project' );
 }
 
-function fetchReviews(ss, projectId) {
-    var apiData = ss.apiParams;
+async function fetchAccountId(ss) {
+    return await ss.getAccounts( true, 'id');
+}
+
+async function fetchReviews(ss, projectId) {
     $('.reviewPopup').remove();
-    ss.getReviewsByProjectId(projectId, res => { buildPopup(res, 'review') } );
+    let res = await ss.getReviewsByProjectId(projectId, true, 'id,name');
+    buildPopup(res, 'review');
 }
 
-function fetchItems(ss, reviewId, callback) {
-    var apiData = ss.apiParams;
+async function fetchItemRevisions(ss, itemId) {
+    $('.revisionsPopup').remove();
+    let res = await ss.getRevisions(itemId);
+    buildPopup(res, 'item-revisions');
+}
+
+async function fetchItems(ss, reviewId) {
+    console.log(`ReviewID is ${reviewId || 'undefined'}`)
     $('.itemPopup').remove();
     if( reviewId == undefined ) {
-        ss.getMedia({}, res => { 
-            buildPopup( res, "item" );
-        });  
+        let res = await ss.getMedia(); 
+        buildPopup( res, "item" );
     } else {
-        ss.getMediaByReviewId(reviewId, res => { buildPopup( res, "item" ) } );
+        let res = await ss.getMediaByReviewId(reviewId);
+        buildPopup( res, "item" );
     }
 }
 
@@ -69,6 +80,7 @@ function buildPopup(res, type = "project'") {
     if(res.err === undefined) {
         var items = [];
         items.push( "<option value='*'>&lt;Any&gt;</option>");
+        console.log(`Reviews in Project: ${JSON.stringify(res)}`)
         $.each( res.objects, function( key, val ) {
             items.push(`<option value='${val.id}' ${type == "item" ? "data-fps = '" + val.fps + "' ": " "} >${JSON.stringify(val.name)}</option>`);
         });
@@ -87,7 +99,7 @@ const demoMarkers = [
     }
 ]
 
-function writeMarkers(sequenceId, markers = demoMarkers) {
+function writeMarkers(app, sequenceId, markers = demoMarkers) {
 
     var activeSequence = app.project.activeSequence;
     if (activeSequence) {

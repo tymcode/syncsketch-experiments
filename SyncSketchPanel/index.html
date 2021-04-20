@@ -21,7 +21,7 @@
 		<script type="text/javascript">
 			var ss;
 			
-			$(document).ready(function(){
+			$(document).ready(function() {
 				
 				$( "#ss-username" ).blur(function(){
 					console.log("Validating email")
@@ -42,21 +42,23 @@
 					} )
 				})
 
-				$("#ss-login-button").click( e => {
+				$("#ss-login-button").click( async (e) => {
 					var apiParams = {};
 					e.preventDefault();
 					apiParams.username = $("#ss-username").val();
 					apiParams.api_key = $("#ss-api_key").val();
-					ss = new SyncSketchAPI(apiParams.username, apiParams.api_key)
-					var res = ss.isConnected(function(res) {
-						console.log(`You are${res.connection ? '' : ' NOT'} connected to the API.`)
-						if(res.connection) {
-							$('#ss-login').hide(400, "swing");
-							$('#get-media-item').show(400, 'swing');
-							fetchProjects(ss);
-							fetchItems(ss);
-						}
-					})
+					ss = new SyncSketchAPI(apiParams.username, apiParams.api_key);
+					try {
+						let res = await ss.isConnected();
+						console.log(`You are${res ? '' : ' NOT'} connected to the API.`)
+						$('#ss-login').hide(400, "swing");
+						$('#get-media-item').show(400, 'swing');
+						fetchProjects(ss);
+						fetchItems(ss); // just gets all items in account
+					} catch ( error) {
+						console.error(`isConnected() failed: ${JSON.stringify( error )}`)
+					}
+
 					
 				});
 				
@@ -97,28 +99,26 @@
 
 				
 				//Refresh annotations list when Media Item popup menu is changed
-				$(document).on('change', '.itemPopup', function() {
+				$(document).on('change', '.itemPopup', async function() {
 					// Set the fps popup to the media item's reported framerate
 					$(`#ss-fps option[value=${$(".itemPopup option:selected").data("fps")}]`).prop('selected', true);
 
 					// Grab some annotations
-					var annotsBaseUrl = "https://syncsketch.com/api/v1/annotation/?";
-					var annotsQuery = ss.apiParams;
-					annotsQuery.item__id = $('.itemPopup').val();
-					annotsQuery.active = 1;
-					annotsQuery.limit = 30; //TODO: make selectable
-					var url = annotsBaseUrl + serialize(annotsQuery);
-					console.log("fetching " + url);
-					$.getJSON(url, function(res) {
-						var annots = parseAnnots(res)
-						annotations = annots;
+					
+					var annotsQuery = { active: 1 };
+					let itemId = $('.itemPopup').val();
+					let limit = 30; //TODO: Make selectable
+					try {
+						let annotset = await (ss.getAnnotations(itemId, null, limit, 0, null, annotsQuery ));
+						var annotations = parseAnnots(annotset)
 						annotationsTable.settings.dataset.originalRecords = annotations;
 						annotationsTable.process();
 						$('#annotation-filters').show(400, 'swing');
 						$('#import-settings').show(400, 'swing');
 						$('#annotation-list-view').show(400, 'swing')
-						//console.log(JSON.stringify(annotations));
-					});
+					} catch ( error ) {
+						console.error(`getAnnotations() failed: ${ JSON.stringify( error )}`)
+					}
 				});
 			})
 			
@@ -198,7 +198,8 @@
 				<legend> Source Review Item</legend>
 					  <label for = "ss-media" class = "itemList">Media Item:</label>
 	    			<div>
-						<label for = "revisionList">Media Item Revision:</label>
+						<label for = "itemRevisionList">Media Item Revision:</label>
+						<select class = "ss-media" id = "item-revisions" name = "item-revisions">
 					</div>
 					<div>
 						<label for = "ss-fps" class = "fpsList">Media Frame Rate:</label>
@@ -226,8 +227,10 @@
        	 		</div>
    	 			<div>
 					<label for = "ss-review" class = "reviewList">Review:</label>
-
         		</div>
+				<div>
+					<label for = "revisionGroup">Annotation Revision Group:</label>
+				</div>
 
 				<button class = "grayButton" id = "reference-in" name = "reference-in">Add by reference</button>
 			</fieldset>
